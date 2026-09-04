@@ -112,6 +112,28 @@ def sem_espera(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def envio_de_email_sincrono(monkeypatch):
+    """Manda o e-mail na hora, em vez de numa thread.
+
+    Em producao o "esqueci minha senha" sai fora da requisicao de proposito:
+    esperar o SMTP so quando a conta existe media, pelo relogio, a mesma
+    informacao que a resposta se recusa a dar.
+
+    No teste isso viraria corrida: o `mailoutbox` e conferido assim que a
+    resposta volta, e a thread ainda nem comecou. Pior, em SQLite ela abre uma
+    segunda conexao e esbarra em "database table is locked". Aqui o envio volta
+    a ser sincrono, e o que se testa e o e-mail, nao a thread.
+    """
+    from apps.accounts import links
+
+    def na_hora(funcao, *args):
+        funcao(*args)
+        return None
+
+    monkeypatch.setattr(links, "em_segundo_plano", na_hora)
+
+
+@pytest.fixture(autouse=True)
 def zera_o_limite_de_tentativa():
     """O throttle do DRF guarda a contagem em cache, e o cache atravessa testes.
 

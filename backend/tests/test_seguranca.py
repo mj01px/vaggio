@@ -1,6 +1,7 @@
 """Senha, recuperacao por e-mail, troca de e-mail e segundo fator."""
 
 import re
+import time
 
 import pyotp
 import pytest
@@ -285,6 +286,16 @@ class TestTrocarEmail:
         assert response.status_code == 400
 
 
+def codigo_de(segredo: str, passos: int = 0) -> str:
+    """Codigo do aplicativo, opcionalmente o do passo seguinte.
+
+    Precisa existir porque o codigo passou a valer UMA entrada: o mesmo numero
+    que ligou o segundo fator nao serve de novo para entrar logo depois. Cada
+    passo tem 30 segundos, e a janela de tolerancia aceita o vizinho.
+    """
+    return pyotp.TOTP(segredo).at(int(time.time()) + passos * 30)
+
+
 class TestDoisFatores:
     def liga(self, api):
         """Faz o caminho inteiro de ativacao e devolve (segredo, codigos)."""
@@ -341,8 +352,10 @@ class TestDoisFatores:
             format="json",
         )
 
+        # Passo seguinte de proposito: o codigo que ligou o 2FA acabou de ser
+        # queimado, e reusar ele aqui e justamente o que nao pode mais.
         response = api_anonimo.post(
-            "/api/v1/sessao/codigo/", {"codigo": pyotp.TOTP(segredo).now()}, format="json"
+            "/api/v1/sessao/codigo/", {"codigo": codigo_de(segredo, 1)}, format="json"
         )
 
         assert response.json()["autenticado"] is True

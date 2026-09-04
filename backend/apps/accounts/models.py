@@ -89,6 +89,12 @@ class Perfil(TimeStampedModel):
     # desistisse no meio ficaria trancado fora na proxima entrada.
     totp_secret = models.CharField("Segredo TOTP", max_length=64, blank=True)
     totp_ativo = models.BooleanField("2FA ativo", default=False)
+    # O maior passo de 30 segundos que ja foi aceito nesta conta. Sem guardar
+    # isso, `verify()` so responde "esse codigo bate com o segredo agora", e o
+    # mesmo codigo entrava quantas vezes coubessem na janela de ~90 segundos.
+    # Codigo visto por cima do ombro continuava servindo depois de a pessoa
+    # entrar, que e justo o cenario que o segundo fator existe para cobrir.
+    totp_ultimo_passo = models.PositiveBigIntegerField("Último passo TOTP", default=0)
     # Guardados com hash, como senha: quem le o banco nao entra na conta.
     codigos_de_reserva = models.JSONField("Códigos de reserva", default=list, blank=True)
 

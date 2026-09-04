@@ -15,19 +15,57 @@ Duas ferramentas, e a diferenca importa:
   limpar; assinado, o dado viaja no proprio link e expira sozinho.
 """
 
+import hashlib
+import logging
+import threading
+
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
+from django.db import connection
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+logger = logging.getLogger(__name__)
 
 # Salt proprio por fluxo: um token de troca de e-mail nao pode ser aceito onde
 # se espera outro assunto, mesmo tendo a mesma SECRET_KEY por tras.
 SALT_EMAIL = "vaggio.troca-de-email"
 
 gerador = PasswordResetTokenGenerator()
+
+
+def em_segundo_plano(funcao, *args) -> threading.Thread:
+    """Manda o e-mail fora da requisicao, e devolve a thread.
+
+    Existe por causa do "esqueci minha senha": o conteudo da resposta e igual
+    para e-mail que existe e e-mail que nao existe, mas o TEMPO nao era. Quem
+    existe esperava o handshake com o SMTP; quem nao existe voltava na hora, e
+    a diferenca passava de 200 ms. Isso e a mesma lista de contas que a
+    resposta se recusa a dar, entregue pelo relogio.
+
+    `connection.close()` no fim nao e detalhe: thread nova ganha conexao propria
+    com o banco, e sem fechar elas vazam uma por pedido de recuperacao.
+    """
+
+    def alvo():
+        try:
+            funcao(*args)
+        except Exception:
+            logger.exception("envio em segundo plano falhou (%s)", funcao.__name__)
+        finally:
+            connection.close()
+
+    thread = threading.Thread(target=alvo, daemon=True)
+    thread.start()
+    return thread
+
+
+def _chave_da_senha(user) -> str:
+    """Marca curta da senha atual, para o link morrer quando ela mudar."""
+    return hashlib.sha256(force_bytes(user.password)).hexdigest()[:16]
 
 
 def _uid(user) -> str:
@@ -52,7 +90,13 @@ def token_confere(user, token: str) -> bool:
 
 
 def link_de_troca_de_email(user, email_novo: str) -> str:
-    codigo = signing.dumps({"uid": user.pk, "email": email_novo}, salt=SALT_EMAIL)
+    # A marca da senha viaja junto: trocar a senha derruba o link pendente. Sem
+    # ela, quem pediu a troca com uma sessao roubada ainda tinha duas horas
+    # para confirmar depois de o dono trocar a senha e achar que resolveu.
+    codigo = signing.dumps(
+        {"uid": user.pk, "email": email_novo, "chave": _chave_da_senha(user)},
+        salt=SALT_EMAIL,
+    )
     return f"{settings.FRONTEND_URL}/confirmar-email?codigo={codigo}"
 
 
@@ -63,6 +107,17 @@ def ler_troca_de_email(codigo: str) -> dict | None:
         return signing.loads(codigo, salt=SALT_EMAIL, max_age=prazo)
     except signing.BadSignature:
         return None
+
+
+def chave_da_senha_confere(user, dados: dict) -> bool:
+    """O link foi feito com a senha que a conta tem agora?
+
+    Codigo antigo, de antes de este campo existir, nao tem a chave: ele vale
+    ate vencer, o que e no maximo duas horas depois do deploy.
+    """
+    if "chave" not in dados:
+        return True
+    return dados["chave"] == _chave_da_senha(user)
 
 
 def _nome_de(user) -> str:
@@ -160,6 +215,42 @@ def manda_convite(user) -> None:
         rotulo="Escolher minha senha",
         url=link_de_senha(user, "definir-senha"),
         rodape=[f"O link vale por {horas} horas e funciona uma vez só."],
+        para=user.email,
+    )
+
+
+def avisa_troca_de_email(user, email_novo: str, *, confirmada: bool) -> None:
+    """Conta ao endereco ANTIGO que estao mexendo na credencial de entrada.
+
+    O link de confirmacao vai para o endereco novo, que e o jeito de provar que
+    ele existe. Mas quem precisa saber que o acesso esta sendo trocado e quem
+    tem o acesso hoje: sem este aviso, uma sessao aberta esquecida bastava para
+    trocar a porta de entrada da conta em silencio.
+    """
+    if confirmada:
+        paragrafos = [
+            f"O e-mail de acesso da sua conta no Vaggio passou a ser {email_novo}.",
+            "Este endereco nao entra mais.",
+        ]
+        assunto = "seu e-mail de acesso mudou"
+    else:
+        paragrafos = [
+            f"Pediram para trocar o e-mail de acesso da sua conta para {email_novo}.",
+            "Nada muda ate o link que mandamos para la ser aberto.",
+        ]
+        assunto = "pediram para trocar seu e-mail"
+
+    _enviar(
+        assunto=assunto,
+        resumo="Aviso sobre o e-mail de acesso da sua conta.",
+        titulo="Mexeram no seu e-mail de acesso",
+        paragrafos=paragrafos,
+        rotulo="Trocar minha senha agora",
+        url=f"{settings.FRONTEND_URL}/esqueci-senha",
+        rodape=[
+            "Se nao foi voce, troque sua senha agora: isso derruba as sessoes "
+            "abertas e cancela a troca pendente.",
+        ],
         para=user.email,
     )
 
