@@ -9,5 +9,13 @@
       "source": "/:caminho*",
       "destination": "/index.html"
     }
+  ],
+  "headers": [
+    {
+      "source": "/api/:caminho*",
+      "headers": [
+        { "key": "x-vercel-enable-rewrite-caching", "value": "0" }
+      ]
+    }
   ]
 }

@@ -66,6 +66,15 @@ services:
         value: "6543"
 
       # ── Endereços ─────────────────────────────────────────────────────────
+      # O hostname do próprio serviço entra sozinho, pela RENDER_EXTERNAL_HOSTNAME.
+      # Acrescente aqui o domínio da Vercel, SEM https:// e sem barra no fim.
+      #
+      # Existe porque a documentação da Vercel não garante qual Host chega num
+      # rewrite externo: pode ser o do Render ou o original. Listar os dois
+      # deixa a configuração certa nos dois casos, e não custa nada.
+      - key: ALLOWED_HOSTS
+        sync: false
+
       # FRONTEND_URL é o domínio da Vercel: é dele que saem os links de
       # recuperação de senha e de convite. Errar aqui manda todo link quebrado.
       - key: FRONTEND_URL
