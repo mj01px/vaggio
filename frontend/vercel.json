@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:caminho*",
-      "destination": "https://TROQUE-PELO-SEU-SERVICO.onrender.com/api/:caminho*"
+      "destination": "https://vaggio-api.onrender.com"
     },
     {
       "source": "/:caminho*",
