@@ -1,0 +1,14 @@
+Django==5.2.17
+djangorestframework==3.15.2
+django-filter==24.3
+django-cors-headers==4.6.0
+python-decouple==3.8
+httpx==0.28.1
+psycopg[binary]==3.2.13
+google-genai==2.21.0
+
+# Segundo fator: pyotp gera e confere o codigo, qrcode desenha o QR da
+# ativacao (e pillow e o que o qrcode usa para virar PNG).
+pyotp==2.10.0
+qrcode==8.2
+pillow==12.3.0

@@ -1,0 +1,7 @@
+staticfiles/
+media/
+logs/
+
+# Dossie pessoal usado para gerar o "Apresente-se": carrega historico de
+# carreira real. Fica fora do git pelo mesmo motivo que o .env fica.
+apps/jobs/pitch/dossie.md

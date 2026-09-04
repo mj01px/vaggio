@@ -1,0 +1,16 @@
+# Normaliza a quebra de linha no repositorio: LF no que e versionado, e o
+# checkout converte para o que a maquina usa. Sem isto, o mesmo arquivo salvo
+# no Windows e no Linux aparece como "arquivo inteiro alterado" no diff.
+* text=auto eol=lf
+
+# Estes dois nao aceitam LF: o cmd.exe do Windows quebra em .bat com LF, e o
+# shell do Linux quebra em .sh com CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.sh  text eol=lf
+
+# Binario: marcar evita o Git tentar normalizar e corromper.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
