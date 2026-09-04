@@ -1,0 +1,101 @@
+# Blueprint do Render. Dá para configurar tudo na mão no painel; este arquivo
+# existe para os comandos de build e start ficarem versionados junto com o
+# código que eles sobem, em vez de só num campo de formulário que ninguém revisa.
+#
+# O banco não está aqui de propósito: é o Supabase, que vive fora do Render.
+
+services:
+  - type: web
+    name: vaggio-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+
+    # `migrate` no build, e não no start: no free tier o serviço hiberna e volta,
+    # e migration rodando a cada acordada é migration rodando concorrente.
+    buildCommand: >-
+      pip install -r requirements/production.txt &&
+      python manage.py migrate --no-input &&
+      python manage.py collectstatic --no-input
+
+    # `--timeout 120` porque duas rotas são síncronas por decisão de projeto: a
+    # coleta leva uns 40 segundos e a geração da apresentação uns 10. Com o
+    # padrão de 30 o gunicorn mataria o worker no meio.
+    # Um worker só porque no free tier a memória não comporta mais.
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+
+    healthCheckPath: /api/v1/health/
+
+    envVars:
+      # Mesma versão do ambiente local. Se o Render não tiver esse patch
+      # exato, o build reclama e basta usar o mais próximo do 3.13.
+      - key: PYTHON_VERSION
+        value: "3.13.15"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+
+      # Gerada pelo Render, 64 caracteres. O `production.py` recusa subir com
+      # menos de 50, porque esta chave assina os links de recuperação de senha.
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Uma camada de proxy (o balanceador do Render) entre o cliente e o
+      # Django. É o que diz ao DRF até onde confiar no X-Forwarded-For, que é a
+      # identidade que o limite de tentativa usa.
+      - key: NUM_PROXIES
+        value: "1"
+
+      # ── Supabase ──────────────────────────────────────────────────────────
+      # Use o POOLER (porta 6543): o free tier tem pouca conexão direta, e o
+      # Render abre a dele a cada acordada. DB_POOLER=True desliga prepared
+      # statement e conexão persistente, que é o que quebra atrás do pgBouncer.
+      - key: DB_POOLER
+        value: "True"
+      - key: DB_SSLMODE
+        value: require
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "6543"
+
+      # ── Endereços ─────────────────────────────────────────────────────────
+      # FRONTEND_URL é o domínio da Vercel: é dele que saem os links de
+      # recuperação de senha e de convite. Errar aqui manda todo link quebrado.
+      - key: FRONTEND_URL
+        sync: false
+      # A Vercel repassa /api para cá, então o Origin que chega é o dela e o
+      # Host é o do Render. Sem esta linha, todo POST cai em 403 de CSRF.
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      # Vazio de propósito: com o rewrite da Vercel nada cruza origem, então não
+      # há CORS para liberar. Preencher aqui só faria sentido se o front
+      # passasse a bater direto no domínio do Render.
+      - key: CORS_ALLOWED_ORIGINS
+        value: ""
+
+      # ── E-mail (Brevo) ────────────────────────────────────────────────────
+      # Sem EMAIL_HOST o Django imprime no console em vez de enviar, e aí
+      # ninguém recebe convite nem recuperação de senha.
+      - key: EMAIL_HOST
+        value: smtp-relay.brevo.com
+      - key: EMAIL_PORT
+        value: "2525"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+
+      # ── Chaves de terceiros ───────────────────────────────────────────────
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

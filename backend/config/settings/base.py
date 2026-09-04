@@ -65,6 +65,29 @@ ASGI_APPLICATION = "config.asgi.application"
 # SQLite por padrao: a ferramenta e de uma pessoa so e precisa rodar sem
 # configurar nada. Preencha DB_NAME no .env para trocar por PostgreSQL.
 if config("DB_NAME", default=""):
+    # Postgres gerenciado costuma vir atras de um pooler (o do Supabase e
+    # pgBouncer em modo transaction, na porta 6543). Ali cada comando pode cair
+    # numa conexao diferente, e duas coisas que sao ganho na conexao direta
+    # viram erro:
+    #
+    # - prepared statement, que o psycopg3 usa sozinho a partir da quinta
+    #   execucao da mesma consulta. O plano fica guardado numa conexao que a
+    #   proxima consulta talvez nao pegue, e o erro que aparece nao ajuda em
+    #   nada ("prepared statement _pg3_0 already exists").
+    # - conexao persistente, que nao faz sentido quando quem guarda conexao ja
+    #   e o pooler.
+    #
+    # `DB_POOLER=True` desliga as duas. Na conexao direta (porta 5432) deixe
+    # como esta, que e mais rapido.
+    via_pooler = config("DB_POOLER", default=False, cast=bool)
+
+    opcoes: dict = {"connect_timeout": 10}
+    # Supabase e a maioria dos gerenciados exigem TLS; local nao usa.
+    if config("DB_SSLMODE", default=""):
+        opcoes["sslmode"] = config("DB_SSLMODE")
+    if via_pooler:
+        opcoes["prepare_threshold"] = None
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -73,8 +96,8 @@ if config("DB_NAME", default=""):
             "PASSWORD": config("DB_PASSWORD", default=""),
             "HOST": config("DB_HOST", default="127.0.0.1"),
             "PORT": config("DB_PORT", default="5432"),
-            "CONN_MAX_AGE": 60,
-            "OPTIONS": {"connect_timeout": 10},
+            "CONN_MAX_AGE": 0 if via_pooler else 60,
+            "OPTIONS": opcoes,
         }
     }
 else:

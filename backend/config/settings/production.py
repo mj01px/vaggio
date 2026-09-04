@@ -15,8 +15,17 @@ assert len(SECRET_KEY) >= 50, (
     "get_random_secret_key as g; print(g())\""
 )
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
-CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv())
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+
+# O Render publica o hostname do servico nesta variavel, e ele muda quando o
+# servico e recriado. Acrescentar sozinho evita o DisallowedHost em toda
+# requisicao por causa de um nome que ninguem lembrou de copiar para o painel.
+_hostname_do_render = config("RENDER_EXTERNAL_HOSTNAME", default="")
+if _hostname_do_render and _hostname_do_render not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_hostname_do_render)
+
+assert ALLOWED_HOSTS, "Defina ALLOWED_HOSTS (ou rode onde RENDER_EXTERNAL_HOSTNAME exista)."
 
 # Quantos saltos de proxy existem entre o cliente e o Django. E o numero que
 # diz ao DRF ate onde da para confiar no X-Forwarded-For, que e a identidade que
