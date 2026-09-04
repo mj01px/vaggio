@@ -7,6 +7,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import Cargo, Perfil, Permissao
+from .permissoes import GERENCIAR_USUARIOS
 
 User = get_user_model()
 
@@ -159,7 +160,17 @@ class CargoEscritaSerializer(serializers.ModelSerializer):
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    """Uma pessoa com acesso, do jeito que a tela de usuarios mostra."""
+    """Uma pessoa com acesso, do jeito que a tela de usuarios mostra.
+
+    O `username` saiu: e identificador interno, a tela nunca mostrou, e mandar
+    junto so dava um segundo nome de conta para quem estivesse colecionando.
+
+    `is_superuser` sai para quem so tem `usuarios.ver`. A permissao e descrita
+    como "listar quem tem acesso", e dizer de quebra quais contas passam por
+    cima de todo controle e entregar a lista de alvos junto com a lista de
+    pessoas. Quem gerencia continua vendo, porque a tela precisa: e o campo que
+    desabilita o botao de desativar.
+    """
 
     nome = serializers.CharField(source="perfil.nome", read_only=True)
     cargo = CargoSerializer(source="perfil.cargo", read_only=True)
@@ -171,7 +182,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "username",
             "email",
             "nome",
             "cargo",
@@ -192,6 +202,22 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def get_tem_dossie(self, obj) -> bool:
         perfil = getattr(obj, "perfil", None)
         return bool(perfil and len(perfil.dossie.strip()) >= 400)
+
+    def to_representation(self, instance):
+        dados = super().to_representation(instance)
+        if not self._quem_le_gerencia():
+            dados.pop("is_superuser", None)
+        return dados
+
+    def _quem_le_gerencia(self) -> bool:
+        pedido = self.context.get("request")
+        usuario = getattr(pedido, "user", None)
+        if usuario is None or not usuario.is_authenticated:
+            return False
+        if usuario.is_superuser:
+            return True
+        perfil = getattr(usuario, "perfil", None)
+        return bool(perfil and perfil.pode(GERENCIAR_USUARIOS))
 
 
 class UsuarioCreateSerializer(serializers.Serializer):

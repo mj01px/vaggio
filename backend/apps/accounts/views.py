@@ -4,7 +4,7 @@ import logging
 
 from django.contrib.auth import get_user_model, login, logout
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -36,6 +36,7 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+seguranca = logging.getLogger("apps.seguranca")
 User = get_user_model()
 
 
@@ -48,15 +49,50 @@ def perfil_de(usuario) -> Perfil:
     return perfil
 
 
+def recusa_se_conceder_demais(quem, cargo) -> None:
+    """Barra dar a alguem (ou a um cargo) permissao que voce mesmo nao tem.
+
+    E a regra que fecha as duas escaladas: pela criacao de conta com um cargo
+    mais forte que o proprio, e pela edicao de cargo acrescentando permissao.
+    Sem ela, `usuarios.gerenciar` e `cargos.gerenciar` eram acesso total
+    disfarcado, e a separacao de cargos so existia na tela.
+
+    Superusuario passa: e o unico lugar de onde o acesso total sai.
+    """
+    if quem.is_superuser or cargo is None:
+        return
+
+    minhas = set(perfil_de(quem).permissoes)
+    faltando = set(cargo.permissoes.values_list("slug", flat=True)) - minhas
+    if faltando:
+        seguranca.warning(
+            "escalada barrada: %s tentou conceder %s",
+            quem.email,
+            ", ".join(sorted(faltando)),
+        )
+        raise ValidationError(
+            "Voce nao pode dar permissao que nao tem: " + ", ".join(sorted(faltando)) + "."
+        )
+
+
 @method_decorator(ensure_csrf_cookie, name="get")
+@method_decorator(csrf_protect, name="post")
+@method_decorator(csrf_protect, name="delete")
 class SessaoView(APIView):
     """GET diz quem esta logado, POST entra, DELETE sai.
 
     O GET tambem e quem planta o cookie de CSRF: o front chama isso ao abrir,
     antes de qualquer POST, senao o Django recusa o proprio login.
+
+    O `csrf_protect` no POST nao e redundante com o middleware: todo `APIView`
+    do DRF sai de `as_view()` embrulhado em `csrf_exempt`, e quem cobra CSRF e
+    o `SessionAuthentication`, que so cobra quando JA existe sessao
+    autenticada. Sem este decorador, a entrada aceitava POST de qualquer
+    origem, e dava para fazer o navegador de alguem entrar numa conta alheia.
     """
 
     permission_classes = [AllowAny]
+    permissao_exigida = None
     throttle_scope = "login"
 
     def get(self, request):
@@ -73,6 +109,7 @@ class SessaoView(APIView):
         usuario = serializer.validated_data["user"]
         lembrar = serializer.validated_data["lembrar"]
         perfil = perfil_de(usuario)
+        seguranca.info("entrada: senha conferida para %s", usuario.email)
 
         # Com segundo fator, a senha certa ainda nao e entrar: guarda quem
         # passou numa sessao ANONIMA e para aqui. `request.user` so vira essa
@@ -97,6 +134,8 @@ class SessaoView(APIView):
         )
 
     def delete(self, request):
+        if request.user.is_authenticated:
+            seguranca.info("saida: %s", request.user.email)
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -105,7 +144,13 @@ class MeuPerfilView(APIView):
     """O perfil de quem esta logado. PATCH edita dossie, termos e preferencias."""
 
     permission_classes = [IsAuthenticated, TemPermissao]
-    permissao_exigida = {"partial_update": EDITAR_PERFIL, "put": EDITAR_PERFIL}
+    # `default: None` e o GET: ler o proprio perfil nao depende de cargo. Precisa
+    # estar escrito porque a checagem passou a negar o que nao se declara.
+    permissao_exigida = {
+        "default": None,
+        "partial_update": EDITAR_PERFIL,
+        "put": EDITAR_PERFIL,
+    }
 
     def get(self, request):
         return Response(PerfilSerializer(perfil_de(request.user)).data)
@@ -173,7 +218,28 @@ class UsuarioViewSet(ModelViewSet):
         if alvo.is_superuser and mudancas.get("is_active") is False:
             raise ValidationError("Conta de superusuario nao se desativa por aqui.")
 
+        if "cargo" in mudancas:
+            recusa_se_conceder_demais(self.request.user, mudancas["cargo"])
+
+        cargo_antes = getattr(getattr(alvo, "perfil", None), "cargo", None)
         serializer.save()
+
+        cargo_depois = getattr(getattr(alvo, "perfil", None), "cargo", None)
+        if cargo_antes != cargo_depois:
+            seguranca.warning(
+                "cargo: %s mudou %s de %s para %s",
+                self.request.user.email,
+                alvo.email,
+                getattr(cargo_antes, "slug", None),
+                getattr(cargo_depois, "slug", None),
+            )
+        if "is_active" in mudancas:
+            seguranca.warning(
+                "conta: %s %s %s",
+                self.request.user.email,
+                "reativou" if mudancas["is_active"] else "desativou",
+                alvo.email,
+            )
 
     def perform_create(self, serializer):
         """Cria a conta e ja manda o convite, quando ela nasceu sem senha.
@@ -182,7 +248,19 @@ class UsuarioViewSet(ModelViewSet):
         desfazer a criacao da conta. Se o envio falhar, a conta existe e o
         admin reenvia o convite pela tela.
         """
+        # A conta nova e a porta dos fundos da escalada: quem so tinha
+        # `usuarios.gerenciar` cadastrava uma conta com o cargo mais forte
+        # apontando para o proprio e-mail, clicava no convite e entrava com
+        # tudo. A trava de "nao troca o proprio cargo" olhava so quem edita.
+        recusa_se_conceder_demais(self.request.user, serializer.validated_data.get("cargo"))
+
         usuario = serializer.save()
+        seguranca.warning(
+            "conta: %s criou %s com cargo %s",
+            self.request.user.email,
+            usuario.email,
+            getattr(getattr(usuario, "perfil", None), "cargo", None),
+        )
         if not usuario.has_usable_password():
             try:
                 links.manda_convite(usuario)
@@ -224,6 +302,56 @@ class CargoViewSet(ModelViewSet):
         if self.action in ("create", "update", "partial_update"):
             return CargoEscritaSerializer
         return CargoSerializer
+
+    def perform_create(self, serializer):
+        self._recusa_escalada(serializer)
+        cargo = serializer.save()
+        seguranca.warning(
+            "cargo: %s criou %s com %s",
+            self.request.user.email,
+            cargo.slug,
+            ", ".join(sorted(cargo.permissoes.values_list("slug", flat=True))) or "nada",
+        )
+
+    def perform_update(self, serializer):
+        # Editar o proprio cargo era o caminho mais curto para acesso total:
+        # um PATCH acrescentando o catalogo inteiro e pronto. Promocao passa a
+        # depender de outra pessoa, que e o ponto de existir cargo.
+        meu = getattr(perfil_de(self.request.user), "cargo", None)
+        if not self.request.user.is_superuser and serializer.instance == meu:
+            raise ValidationError(
+                "Voce nao edita o proprio cargo. Peca a outro administrador."
+            )
+
+        self._recusa_escalada(serializer)
+        antes = set(serializer.instance.permissoes.values_list("slug", flat=True))
+        cargo = serializer.save()
+        depois = set(cargo.permissoes.values_list("slug", flat=True))
+        if antes != depois:
+            seguranca.warning(
+                "cargo: %s mudou %s (+%s -%s)",
+                self.request.user.email,
+                cargo.slug,
+                ", ".join(sorted(depois - antes)) or "nada",
+                ", ".join(sorted(antes - depois)) or "nada",
+            )
+
+    def _recusa_escalada(self, serializer) -> None:
+        """Nenhum cargo recebe permissao que quem esta editando nao tem."""
+        if self.request.user.is_superuser:
+            return
+        pedidas = {p.slug for p in serializer.validated_data.get("permissoes", [])}
+        minhas = set(perfil_de(self.request.user).permissoes)
+        faltando = pedidas - minhas
+        if faltando:
+            seguranca.warning(
+                "escalada barrada: %s tentou conceder %s a um cargo",
+                self.request.user.email,
+                ", ".join(sorted(faltando)),
+            )
+            raise ValidationError(
+                "Voce nao pode dar permissao que nao tem: " + ", ".join(sorted(faltando)) + "."
+            )
 
     def perform_destroy(self, instance):
         if instance.perfis.exists():

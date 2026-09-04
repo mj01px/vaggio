@@ -137,7 +137,6 @@ export interface Permissao {
 /** Uma pessoa com acesso, na tela de usuarios. */
 export interface Usuario {
   id: number
-  username: string
   email: string
   nome: string
   cargo: Cargo | null
@@ -145,7 +144,16 @@ export interface Usuario {
   perfil_id: number | null
   tem_dossie: boolean
   is_active: boolean
-  is_superuser: boolean
+  /**
+   * So vem para quem tem `usuarios.gerenciar`.
+   *
+   * Quem so pode VER usuarios nao precisa saber quais contas passam por cima de
+   * todo o controle de acesso, e a API deixou de mandar. Opcional aqui, e nao
+   * `boolean`, para o TypeScript cobrar o tratamento de quando ele nao vem: o
+   * unico uso e desabilitar o botao de desativar, que so aparece para quem
+   * gerencia e portanto recebe o campo.
+   */
+  is_superuser?: boolean
   last_login: string | null
   date_joined: string
 }
