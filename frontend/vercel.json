@@ -2,17 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/api/:caminho*",
-      "destination": "https://vaggio-api.onrender.com/api/:caminho*"
+      "source": "/api/(.*)",
+      "destination": "https://vaggio-api.onrender.com/api/$1"
     },
     {
-      "source": "/:caminho*",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/api/:caminho*",
+      "source": "/api/(.*)",
       "headers": [
         { "key": "x-vercel-enable-rewrite-caching", "value": "0" }
       ]
