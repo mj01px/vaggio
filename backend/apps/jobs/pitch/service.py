@@ -36,6 +36,7 @@ def gerar_e_salvar(
     instrucao_extra: str = "",
     modelo: str = "",
     perfil=None,
+    autor=None,
 ) -> Pitch:
     """Igual a `gerar_apresentacao`, mas guarda a versao gerada.
 
@@ -52,6 +53,7 @@ def gerar_e_salvar(
     )
     return Pitch.objects.create(
         job=job,
+        autor=autor,
         texto=resultado.texto,
         modelo=resultado.modelo,
         instrucao=instrucao_extra.strip()[:300],

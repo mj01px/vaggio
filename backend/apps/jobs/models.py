@@ -1,5 +1,6 @@
 import hashlib
 
+from django.conf import settings
 from django.db import models
 
 from apps.core.models import TimeStampedModel
@@ -113,6 +114,20 @@ class Pitch(TimeStampedModel):
     """
 
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="pitches")
+    # Quem pediu. O texto sai do dossie dessa pessoa (historico, projetos, as
+    # vezes salario), entao ele nao e da vaga: e dela. Sem esta coluna, quem
+    # tivesse `apresentacao.gerar` lia o dossie dos outros pela vaga.
+    #
+    # Nulo para as linhas que existiam antes desta coluna, que nao tem como
+    # saber de quem eram; so o superusuario ve essas.
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="pitches",
+        null=True,
+        blank=True,
+        verbose_name="Autor",
+    )
     texto = models.TextField("Texto")
 
     modelo = models.CharField("Modelo", max_length=80)
@@ -128,7 +143,10 @@ class Pitch(TimeStampedModel):
         verbose_name = "apresentação"
         verbose_name_plural = "apresentações"
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["job", "-created_at"], name="pitch_job_created_idx")]
+        indexes = [
+            models.Index(fields=["job", "-created_at"], name="pitch_job_created_idx"),
+            models.Index(fields=["autor", "-created_at"], name="pitch_autor_created_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Apresentação para {self.job.title[:40]} ({self.created_at:%d/%m %H:%M})"

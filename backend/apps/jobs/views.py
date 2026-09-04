@@ -14,6 +14,7 @@ from apps.accounts.permissoes import (
     TRIAR_VAGAS,
     VER_VAGAS,
 )
+from apps.core.throttling import ThrottlePorEscopo
 
 from .filters import JobFilter
 from .models import Job
@@ -77,6 +78,28 @@ class JobViewSet(ModelViewSet):
     # apagaria `tags` e `published_at`, que a tela nao manda de volta.
     http_method_names = ["get", "post", "patch", "head", "options"]
 
+    # Gerar apresentacao chama o Gemini e segura o worker por uns 10 segundos:
+    # e a acao mais cara da API, e a unica que gasta cota de terceiro.
+    throttle_scope_por_acao = {"pitch": "pitch"}
+
+    def get_throttles(self):
+        escopo = self.throttle_scope_por_acao.get(self.action)
+        if escopo and self.request.method == "POST":
+            return [ThrottlePorEscopo(escopo)]
+        return super().get_throttles()
+
+    def pitches_visiveis(self, job):
+        """As apresentacoes desta vaga que quem pediu pode ler.
+
+        O texto sai do dossie de quem gerou (historico, projetos, as vezes
+        salario), entao ele e da pessoa e nao da vaga. Sem este filtro, qualquer
+        um com `apresentacao.gerar` lia o dossie dos outros pela vaga.
+        """
+        pitches = job.pitches.all()
+        if self.request.user.is_superuser:
+            return pitches
+        return pitches.filter(autor=self.request.user)
+
     def get_queryset(self):
         # select_related no reverse OneToOne: sem ele, `has_application`
         # dispara uma consulta por vaga na serializacao da lista.
@@ -124,7 +147,7 @@ class JobViewSet(ModelViewSet):
         job = self.get_object()
 
         if request.method == "GET":
-            return Response(PitchSerializer(job.pitches.all(), many=True).data)
+            return Response(PitchSerializer(self.pitches_visiveis(job), many=True).data)
 
         perfil = getattr(request.user, "perfil", None)
 
@@ -140,6 +163,7 @@ class JobViewSet(ModelViewSet):
                 max_chars=pedido.validated_data["max_chars"],
                 instrucao_extra=pedido.validated_data["instrucao"],
                 perfil=perfil,
+                autor=request.user,
             )
         except (DossieAusenteError, DossieVazioError) as exc:
             # Erro de configuracao sua, nao falha do servico: o texto da
@@ -150,10 +174,10 @@ class JobViewSet(ModelViewSet):
         finally:
             _pitch_lock.release()
 
-        # Uma versao por vaga: gerar de novo substitui a anterior. O apagar vem
-        # depois da geracao dar certo de proposito, senao uma falha do Gemini
-        # levaria junto o texto que ja estava pronto na tela.
-        job.pitches.exclude(pk=criado.pk).delete()
+        # Uma versao por vaga POR PESSOA: gerar de novo substitui a anterior, a
+        # sua. O apagar vem depois da geracao dar certo de proposito, senao uma
+        # falha do Gemini levaria junto o texto que ja estava pronto na tela.
+        job.pitches.filter(autor=request.user).exclude(pk=criado.pk).delete()
 
         return Response(PitchSerializer(criado).data, status=status.HTTP_201_CREATED)
 
