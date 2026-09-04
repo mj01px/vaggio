@@ -5,13 +5,26 @@ from .base import *  # noqa: F401, F403
 DEBUG = False
 
 SECRET_KEY = config("SECRET_KEY")
-# `check --deploy` so avisa (W009) sobre chave curta, e aviso nao para deploy
-# nenhum. A SECRET_KEY assina os tokens de recuperacao de senha e o codigo de
-# troca de e-mail: chave adivinhavel e link de reset forjado, o que e pior que
-# nao subir. Entao aqui e assert, e nao aviso.
-assert len(SECRET_KEY) >= 50, (
-    "SECRET_KEY de producao precisa de pelo menos 50 caracteres aleatorios. "
-    "Gere uma com: python -c \"from django.core.management.utils import "
+
+# `check --deploy` so avisa (W009) sobre chave fraca, e aviso nao para deploy
+# nenhum. Esta chave assina os tokens de recuperacao de senha e o codigo de
+# troca de e-mail: chave adivinhavel e link de reset forjado. Entao aqui e
+# assert, e nao aviso.
+#
+# O que se mede e resistencia a chute, e nao comprimento: 40 caracteres com
+# variedade cobrem os dois jeitos normais de gerar uma, e nenhum deles e o
+# limite de 50 do aviso do Django.
+#
+#   get_random_secret_key() do Django   50 caracteres de um alfabeto de 50
+#   `generateValue: true` do Render     44 caracteres de base64 (256 bits)
+#
+# Os dois passam de 200 bits. O que nao passa daqui e chave digitada a mao,
+# que e o caso real que isto existe para pegar.
+_VARIEDADE_MINIMA = 12
+assert len(SECRET_KEY) >= 40 and len(set(SECRET_KEY)) >= _VARIEDADE_MINIMA, (
+    "SECRET_KEY de producao fraca: precisa de pelo menos 40 caracteres e "
+    f"{_VARIEDADE_MINIMA} caracteres distintos. No Render, use `generateValue`. "
+    "Fora dele: python -c \"from django.core.management.utils import "
     "get_random_secret_key as g; print(g())\""
 )
 
@@ -21,11 +34,15 @@ CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 # O Render publica o hostname do servico nesta variavel, e ele muda quando o
 # servico e recriado. Acrescentar sozinho evita o DisallowedHost em toda
 # requisicao por causa de um nome que ninguem lembrou de copiar para o painel.
+#
+# Sem assert aqui de proposito: a variavel nao existe durante o BUILD, so em
+# execucao, e `migrate` e `collectstatic` rodam no build. Exigir a lista cheia
+# ali derrubava o deploy antes de o servico existir, que e justamente quando
+# ainda nao da para saber o endereco dele. Lista vazia em producao nao passa
+# silenciosa: o Django recusa toda requisicao com DisallowedHost, alto e claro.
 _hostname_do_render = config("RENDER_EXTERNAL_HOSTNAME", default="")
 if _hostname_do_render and _hostname_do_render not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_hostname_do_render)
-
-assert ALLOWED_HOSTS, "Defina ALLOWED_HOSTS (ou rode onde RENDER_EXTERNAL_HOSTNAME exista)."
 
 # Quantos saltos de proxy existem entre o cliente e o Django. E o numero que
 # diz ao DRF ate onde da para confiar no X-Forwarded-For, que e a identidade que
