@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from apps.accounts.permissoes import RODAR_COLETA, VER_COLETA
+from apps.core.throttling import ThrottlePorEscopo
 
 from .models import CollectionRun
 from .serializers import CollectionRunSerializer
@@ -39,11 +40,20 @@ class CollectionRunViewSet(ReadOnlyModelViewSet):
     """
 
     permissao_exigida = {"default": VER_COLETA, "run": RODAR_COLETA}
+    # Uma coleta leva uns 40 segundos e busca as mesmas fontes toda vez: nao ha
+    # motivo humano para disparar dezenas por hora, e cada uma segura um worker.
+    throttle_scope_por_acao = {"run": "coleta"}
     queryset = CollectionRun.objects.all()
     serializer_class = CollectionRunSerializer
     filterset_fields = ["source"]
     ordering_fields = ["started_at", "new_count"]
     ordering = ["-started_at"]
+
+    def get_throttles(self):
+        escopo = self.throttle_scope_por_acao.get(self.action)
+        if escopo:
+            return [ThrottlePorEscopo(escopo)]
+        return super().get_throttles()
 
     @action(detail=False, methods=["post"])
     def run(self, request):

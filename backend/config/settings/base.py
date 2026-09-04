@@ -91,8 +91,14 @@ AUTHENTICATION_BACKENDS = ["apps.accounts.backends.BackendDeEmail"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 8}},
+     "OPTIONS": {"min_length": 10}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    # Sem este, "19283746" passa: nao esta na lista de senhas comuns e tem
+    # tamanho de sobra, mas e um teclado numerico e nada mais.
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    # E sem este, a pessoa usa o proprio e-mail como senha, que e a primeira
+    # coisa que alguem tenta depois de descobrir o e-mail dela.
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
 ]
 
 LANGUAGE_CODE = "pt-br"
@@ -127,11 +133,34 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # Quantos proxies existem entre o cliente e o Django. E o numero que diz ao
+    # DRF ate onde ele pode confiar no X-Forwarded-For.
+    #
+    # Sem isto o DRF usa o cabecalho INTEIRO como identidade do cliente, e o
+    # cabecalho vem de quem chama: trocar ele a cada requisicao dava um balde de
+    # contagem novo toda vez, e os tres limites abaixo viravam enfeite. O valor
+    # certo depende do deploy, entao cada ambiente declara o seu.
+    "NUM_PROXIES": config("NUM_PROXIES", default=0, cast=int),
     # Rota de autenticacao e a unica que da para bater a porta sem sessao, e
     # a unica que manda e-mail para terceiro. Sem limite, "esqueci minha senha"
     # vira ferramenta de encher caixa de entrada dos outros.
-    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    #
+    # O `UserRateThrottle` cobre o resto: teto por pessoa, largo o suficiente
+    # para nunca esbarrar em uso humano e apertado o suficiente para um laco
+    # de script morrer no primeiro minuto.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
     "DEFAULT_THROTTLE_RATES": {
+        # Teto geral de quem esta logado. Uma triagem intensa faz umas 40
+        # requisicoes por minuto; 3000/hora e cinquenta por minuto sustentadas.
+        "user": config("THROTTLE_USER", default="3000/hour"),
+        # Gerar apresentacao chama o Gemini e leva uns 10 segundos: e cota
+        # queimada e worker preso, nao um GET qualquer.
+        "pitch": config("THROTTLE_PITCH", default="30/hour"),
+        # A coleta leva uns 40 segundos e busca as mesmas fontes toda vez.
+        "coleta": config("THROTTLE_COLETA", default="12/hour"),
         # Errar a senha cinco vezes seguidas e humano; cem nao e.
         "login": config("THROTTLE_LOGIN", default="10/min"),
         # Pedir link de recuperacao e acao rara por natureza.
@@ -140,6 +169,18 @@ REST_FRAMEWORK = {
         # sao seis digitos, entao o limite e o que torna adivinhar inviavel.
         "2fa": config("THROTTLE_2FA", default="10/min"),
     },
+}
+
+# ── Cache ─────────────────────────────────────────────────────────────────────
+# E onde o DRF guarda a contagem do limite de tentativa. Em memoria serve para
+# um processo so, que e o caso do `runserver` e o dos testes. Producao
+# sobrescreve: com varios workers do gunicorn, cada um contaria por conta
+# propria e o limite real viraria "o numero escrito vezes o numero de workers".
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "vaggio-local",
+    }
 }
 
 # ── E-mail ────────────────────────────────────────────────────────────────────
@@ -195,6 +236,13 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # Linha por evento de seguranca: entrada recusada, codigo de 2FA
+        # errado, 403 de cargo, conta criada, cargo trocado, 2FA ligado ou
+        # desligado. Sai separado do resto para dar para filtrar (`apps.seguranca`)
+        # sem caçar no meio do log da aplicacao. Vai para a saida padrao de
+        # proposito: quem roda em container ja coleta isso, e arquivo dentro do
+        # container e log que some no proximo deploy.
+        "apps.seguranca": {"handlers": ["console"], "level": "INFO", "propagate": False},
         # Uma linha por requisicao do httpx afogaria a saida do `collect`, que
         # faz dezenas delas. Em WARNING so aparece o que deu errado.
         "httpx": {"handlers": ["console"], "level": "WARNING", "propagate": False},

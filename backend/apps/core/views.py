@@ -9,6 +9,10 @@ class HealthView(APIView):
     # Continua aberto de proposito: e ping de infra, e exigir login para
     # responder "ok" quebraria healthcheck de container.
     permission_classes = [AllowAny]
+    permissao_exigida = None
+    # Sem limite de tentativa: o healthcheck do container bate aqui a cada
+    # trinta segundos, e um 429 aqui seria lido como "a API caiu".
+    throttle_classes = []
 
     def get(self, request):
         return Response({"status": "ok"})

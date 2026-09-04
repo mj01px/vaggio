@@ -21,6 +21,8 @@ dist/
 !.env.example
 
 # ── Ferramentas ───────────────────────────────────────────────────────────
+# Cache do throttle em arquivo: producao aponta CACHE_LOCATION para ca.
+.cache/
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/

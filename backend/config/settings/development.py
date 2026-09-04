@@ -28,6 +28,11 @@ INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
 MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware"] + MIDDLEWARE  # noqa: F405
 INTERNAL_IPS = ["127.0.0.1"]
 
+# Nada na frente do Django aqui: o Vite so faz proxy, nao acrescenta cabecalho
+# de proxy. Zero manda o DRF ignorar X-Forwarded-For e usar REMOTE_ADDR, que e
+# o unico valor que o cliente nao escolhe.
+REST_FRAMEWORK["NUM_PROXIES"] = 0  # noqa: F405
+
 # A API renderiza JSON puro em producao; em dev vale a interface navegavel.
 REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [  # noqa: F405
     "rest_framework.renderers.JSONRenderer",
