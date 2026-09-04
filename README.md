@@ -1,369 +1,347 @@
-# Vaggio
+<div align="center">
 
-Coleta vagas de desenvolvimento de fontes publicas, pontua cada uma pelo meu
-perfil e acompanha as candidaturas num funil. Resolve dois problemas concretos
-da busca por emprego: **achar as vagas certas no meio do ruido** e **nao perder
-o follow-up** de processo nenhum.
+<br/>
 
-Sucessor do `radar`, com backend e frontend separados.
+<a href="https://git.io/typing-svg">
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=30&pause=1000&color=0B3D66&center=true&vCenter=true&width=520&lines=Vaggio;Collect.+Score.+Follow+up." alt="Typing SVG" />
+</a>
 
-## Arquitetura
+<br/>
+
+<p>
+  <img src="https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django&logoColor=white"/>
+  <img src="https://img.shields.io/badge/DRF-3.15-A30000?style=flat-square&logo=django&logoColor=white"/>
+  <img src="https://img.shields.io/badge/React-19-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
+  <img src="https://img.shields.io/badge/TypeScript-5-007ACC?style=flat-square&logo=typescript&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Tailwind-4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white"/>
+  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white"/>
+</p>
+
+</div>
+
+<br/>
+
+---
+
+## `~/about`
+
+```ts
+const vaggio = {
+  type:        "Full-Stack Web Application",
+  backend:     ["Python 3.13", "Django 5.2", "Django REST Framework", "PostgreSQL", "pytest"],
+  frontend:    ["React 19", "TypeScript", "Vite", "Tailwind CSS v4", "TanStack Query", "React Router"],
+  features:    ["Job radar", "Profile scoring", "Kanban funnel", "AI cover letters", "Dynamic RBAC", "TOTP 2FA"],
+  sources:     "Brazil-first — GitHub Issues · Gupy",
+  author:      "Mauro Junior · github.com/mj01px",
+} as const;
+```
+
+**Vaggio** collects developer jobs from public sources, scores every one of them
+against your own profile, and tracks the applications through a funnel. It solves
+two concrete problems of a job hunt: **finding the right postings inside the noise**
+and **never dropping a follow-up**.
+
+Jobs are ingested from GitHub Issues boards and the public Gupy portal, ranked by a
+scoring engine you can tune, and turned into a personal cover letter by Gemini using
+a dossier only you write. All served by a Django REST API with session auth,
+role-based access control and a second factor.
 
 ```
-frontend/  React 19 + Vite + TypeScript + Tailwind        :5173
-   |  HTTP  /api/v1
-backend/   Django 5 + DRF                                  :8000
-   |
-   +-- apps/collectors  fontes (GitHub, Gupy) e log de coleta
-   +-- apps/jobs        vaga + scoring por perfil
-   +-- apps/pipeline    funil de candidaturas e linha do tempo
-   +-- apps/accounts    perfil, cargo e permissao (RBAC)
-   +-- apps/core        bases, paginacao, envelope de erro
+vaggio/
+├── backend/     # Django REST API   →  http://localhost:8000
+└── frontend/    # React + Vite SPA  →  http://localhost:5173
 ```
 
-Fluxo: `manage.py collect` busca nas fontes, corta o que e velho, deduplica por
-hash e pontua. A tela **Radar** mostra a fila da ultima semana ordenada por
-score, paginada de 100 em 100, onde cada vaga vira candidatura ou e descartada.
-O seletor de periodo abre a janela para 15 ou 30 dias, ou para tudo.
+---
 
-A fila nao esconde vaga ruim: tudo que foi coletado aparece, e o score so
-decide a ordem. Quem quiser cortar usa o campo `score min` da tela. O contador
-"na fila inteira" no cabecalho mostra o total sem os filtros, para nunca
-sobrar duvida sobre o que o periodo esta cortando. A tela **Board** e o funil: Quero aplicar, Aplicada, Triagem, Teste,
-Entrevista, Proposta. Follow-up vencido aparece em vermelho no topo.
+## `~/features`
 
-## Rodando
+<table>
+  <tr>
+    <td valign="top" width="50%">
+      <b>🎯 Job hunting</b><br/><br/>
+      <ul>
+        <li>Radar: a triage queue ranked by your profile</li>
+        <li>Date range, source and minimum score filters</li>
+        <li>Manual entry for what the collectors miss</li>
+        <li>Kanban funnel — drag on desktop and on touch</li>
+        <li>Overdue follow-ups surfaced on the dashboard</li>
+        <li>Closed applications kept for the history</li>
+        <li>AI cover letter per job, written from your dossier</li>
+      </ul>
+    </td>
+    <td valign="top" width="50%">
+      <b>🛠️ Admins</b><br/><br/>
+      <ul>
+        <li>Dynamic roles & permissions (RBAC)</li>
+        <li>User management, invite only</li>
+        <li>Collection history per run</li>
+        <li>Job editing straight from the Radar</li>
+      </ul>
+      <br/>
+      <b>🔒 Access & security</b><br/><br/>
+      <ul>
+        <li>No public sign-up — accounts start from an invite</li>
+        <li>Password recovery by e-mail, single-use links</li>
+        <li>E-mail change confirmed on the <i>new</i> address</li>
+        <li>TOTP second factor with backup codes</li>
+        <li>Rate limiting on every public route</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-Backend:
+---
+
+## `~/getting-started`
+
+### Backend
 
 ```bash
 cd backend
+
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements/development.txt
-copy .env.example .env
+
+copy .env.example .env          # then fill in the values
+
 python manage.py migrate
-python manage.py createsuperuser   # o e-mail que ele pede e o login
-python manage.py runserver 8000
+python manage.py createsuperuser   # the e-mail it asks for is the login
+python manage.py runserver 8000    # → http://localhost:8000
 ```
 
-Frontend, em outro terminal:
+### Frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm install && npm run dev      # → http://localhost:5173
 ```
 
-Abre em <http://localhost:5173/>, que e a tela de login; o app fica em
-`/dashboard` e nas outras rotas, quase todas atras de sessao. A API fica em
-<http://127.0.0.1:8000/api/v1/> e o Vite ja faz proxy de `/api`, entao nao ha
-CORS para configurar em dev.
+On Windows, `scripts\dev.bat` starts both at once and `scripts\collect.bat` runs a
+collection. The database defaults to SQLite with nothing to configure; fill in the
+`DB_*` variables to use PostgreSQL instead.
 
-Para mudar a porta da API, ajuste `BACKEND` em `frontend/vite.config.ts` e o
-`runserver` do `scripts/dev.bat` juntos: quem decide para onde o front fala e
-o proxy, nao o navegador.
+---
 
-No Windows, `scripts\dev.bat` sobe os dois de uma vez e `scripts\collect.bat`
-roda a coleta.
+## `~/environment`
 
-Banco padrao e SQLite, sem configurar nada. Para usar PostgreSQL, preencha
-`DB_NAME` e o resto das `DB_*` no `backend/.env`.
+Create `.env` inside `backend/`:
 
-## Comandos
+```env
+# Django signing key
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(50))"
+SECRET_KEY=your_secret_key_here
 
-| Comando | O que faz |
-|---|---|
-| `manage.py collect` | Roda todas as fontes (ultimos 30 dias) |
-| `manage.py collect --source github` | Roda uma fonte so |
-| `manage.py collect --max-age 7` | So o que foi publicado na ultima semana |
-| `manage.py collect --max-age 0` | Sem corte de idade |
-| `manage.py collect --min-score 20` | Descarta o que pontuar abaixo disso na entrada |
-| `manage.py collect --dry-run` | Mostra o que salvaria, sem gravar |
-| `manage.py rescore` | Recalcula o score das vagas ja salvas |
-| `manage.py pitch` | Lista as vagas do topo da fila, com o id |
-| `manage.py pitch <id>` | Gera o "Apresente-se" da Gupy para aquela vaga |
+# Personal GitHub token, public scope is enough
+# Without it the API allows 60 requests/hour, with it 5000
+GITHUB_TOKEN=your_github_token_here
 
-A coleta corta por **idade**, nao por score. Vaga publicada ha mais de 30 dias
-nao entra (`--max-age`), e o score serve so para ordenar a fila depois: cortar
-por score na entrada joga fora um dado que nao volta sem recoletar, e o
-`rescore` pode mudar de ideia sobre ele amanha. Se quiser o corte antigo,
-`--min-score` continua ali.
+# Google AI Studio key, used to write the cover letters
+# Free tier, no card: https://aistudio.google.com
+GEMINI_API_KEY=your_gemini_key_here
+```
 
-Uma rodada completa leva cerca de 20 segundos e faz ~50 requisicoes. O botao
-**buscar vagas novas** no Radar dispara exatamente a mesma coleta, com os mesmos
-30 dias de corte, e devolve o resultado na tela. Ela e sincrona de proposito:
-esperar 20 segundos e ver "42 novas" vale mais que responder na hora e ficar
-perguntando se ja acabou. Duas coletas ao mesmo tempo sao recusadas com 409.
+<details>
+<summary><b>Optional overrides</b></summary>
+<br/>
 
-## Apresente-se
+```env
+# PostgreSQL — fill DB_NAME to use it instead of SQLite
+DB_NAME=
+DB_USER=postgres
+DB_PASSWORD=
+DB_HOST=127.0.0.1
+DB_PORT=5432
 
-A Gupy tem um campo de apresentacao pessoal por vaga. O Vaggio escreve um
-rascunho dele, personalizado para a vaga. Nada e enviado a lugar nenhum: voce
-le, ajusta e cola voce mesmo.
+# E-mail. Without EMAIL_HOST Django prints the message to the console, so the
+# recovery link shows up in the runserver terminal and development needs no SMTP.
+# On Brevo, EMAIL_HOST_USER is NOT the account e-mail: it is the dedicated SMTP
+# login, on the same page where the key is generated.
+EMAIL_HOST=
+EMAIL_PORT=587
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+DEFAULT_FROM_EMAIL=Vaggio <no-reply@example.dev>
 
-Pelo **Board**, que e o caminho do dia a dia: o botao `apresente-se` no cartao
-da candidatura abre um painel com o tamanho alvo, um campo de ajuste opcional,
-o texto gerado e o botao de copiar. Gerar de novo acrescenta uma versao ao
-historico em vez de substituir, entao da para comparar.
+# Base of every link sent by e-mail. This is the FRONTEND address, not the API:
+# whoever clicks lands on a screen. In production it MUST be the real domain.
+FRONTEND_URL=http://localhost:5173
 
-Pelo terminal, que e onde se experimenta prompt sem encher o banco de rascunho:
+# Single-use link lifetimes, in hours
+PRAZO_LINK_SENHA_HORAS=2
+PRAZO_LINK_CONVITE_HORAS=72
+PRAZO_LINK_EMAIL_HORAS=2
+
+# Rate limits on the public routes
+THROTTLE_LOGIN=10/min
+THROTTLE_RECUPERACAO=5/hour
+THROTTLE_2FA=10/min
+
+# Collectors
+GUPY_API=https://employability-portal.gupy.io/api/v1/jobs
+GEMINI_MODEL=gemini-3.7-flash
+
+# CORS (the Vite dev server runs on 5173)
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+```
+
+</details>
+
+---
+
+## `~/commands`
 
 ```bash
-python manage.py pitch                 # lista as vagas com o id
-python manage.py pitch 64
-python manage.py pitch 64 --max-chars 800
-python manage.py pitch 64 --instrucao "puxa mais o lado de dados"
+python manage.py collect              # run every source now
+python manage.py collect --dry-run    # show what would be saved, save nothing
+python manage.py rescore              # reapply the scoring to what is stored
+python manage.py pitch <job_id>       # write a cover letter from the terminal
+python manage.py sync_permissoes      # load new permission slugs into the table
 ```
 
-Duas pecas fazem funcionar:
+---
 
-- **O dossie**, em `apps/jobs/pitch/dossie.md`, que diz quem voce e. E a unica
-  fonte de verdade sobre voce: o que nao estiver escrito ali nao pode aparecer
-  no texto. Fica fora do git, junto com o `.env`, porque carrega historico de
-  carreira real.
-- **A vaga**, com a descricao inteira que a coleta ja guardou, mais as `tags`,
-  que sao os pontos onde o seu perfil ja casa com ela segundo o scoring.
+## `~/how-it-works`
 
-O modelo e o Gemini pelo Google AI Studio, no free tier. Preencha
-`GEMINI_API_KEY` no `.env`; `GEMINI_MODEL` tem padrao e so precisa ser mexido
-para trocar de modelo. Uma geracao gasta cerca de 3200 tokens de entrada e 250
-de saida.
+<details>
+<summary><b>Scoring — what makes a job good for you</b></summary>
+<br/>
 
-## Perfil e acesso
+The whole criterion lives in `apps/jobs/scoring/profile.py`, the only file to edit
+to change what counts. Terms are grouped by weight: the stack you want, the domain
+where your experience is worth more, the seniority that fits, and penalties for the
+ones that do not.
 
-Tudo que o app sabe sobre uma pessoa mora num **Perfil**: o dossie que escreve a
-apresentacao, os termos que decidem se uma vaga e boa para ela, e o tamanho
-preferido do texto. Antes isso vivia em arquivo, o que so funcionava para uma
-pessoa so.
+Three rules keep it honest: a hit in the **title counts double**, since that is the
+most reliable signal; **one hit per group is enough**, so repetition cannot inflate a
+score; and asking for **too many years of experience subtracts**. After editing,
+`manage.py rescore` reapplies it to everything already stored.
 
-O acesso e RBAC com as permissoes em tabela, nao fixas no codigo: dar ou tirar
-acesso e dado, nao deploy. Um **Cargo** junta permissoes, e o Perfil aponta para
-um cargo. Dois cargos ja vem prontos:
+A profile can also override the terms from the app itself, in `/perfil`, without a
+deploy.
 
-| Cargo | O que pode |
-|---|---|
-| `leitura` | Ve o radar, o funil e o historico de coleta, sem mexer em nada |
+</details>
 
-Nao ha cargo "pode tudo" semeado: acesso total sai do `is_superuser`, que passa
-por cima da checagem inteira. Um cargo com todas as permissoes seria um segundo
-lugar para dar o mesmo acesso, e envelheceria a cada permissao nova.
+<details>
+<summary><b>Collectors — and what the Gupy API really accepts</b></summary>
+<br/>
 
-As treze permissoes: `vagas.ver`, `vagas.triar`, `vagas.gerenciar`, `funil.ver`,
-`funil.gerenciar`, `coleta.ver`, `coleta.rodar`, `apresentacao.gerar`,
-`perfil.editar`, `usuarios.ver`, `usuarios.gerenciar`, `cargos.ver`,
-`cargos.gerenciar`. Cargos e permissoes se editam na tela `/cargos`.
+A source receives configuration, goes to the origin and returns `RawJob`. It never
+touches the database and never scores: that belongs to the collection service, which
+is what keeps each source small and testable without Django.
 
-Superusuario passa por tudo sem depender de cargo. Perfil **sem** cargo nao pode
-nada: conta pela metade nao vira acesso.
+The Gupy module documents what was **measured**, not assumed:
 
-```bash
-python manage.py createsuperuser          # cria a conta; o perfil nasce no 1o login
-python manage.py sync_permissoes          # reaplica o catalogo depois de mexer nele
-python manage.py importar_dossie --usuario mauro@exemplo.dev   # leva o dossie.md para o perfil
-```
+- `pagination.total` lies when `limit` is high, so the stop condition is the short
+  page, never the counter. Trusting it cost 550 jobs on a single term;
+- there is no date or sort parameter, so recency is cut on our side;
+- spelling variants (`back end`, `back-end`, `backend`) return **zero** new jobs
+  over each other;
+- broad terms poison the queue. `estagio` alone returns 1.760 postings, ~80% of them
+  outside tech, and the score does not protect you: seniority terms are worth points,
+  so an unrelated internship lands *above* a real developer job;
+- prefix matching is a trap. `programacao` also matches "**Programa** de Estágio".
 
-As rotas do app, com a administracao entre elas em vez de num painel separado.
-So `/` e publica; nas outras, quem chega sem sessao volta para o login e e
-devolvido ao lugar certo depois de entrar:
+A page that fails is retried before giving up, and a search that never answers is
+recorded on the run, so a collection that lost jobs to an outage does not pass for a
+quiet day.
 
-| Rota | O que faz |
-|---|---|
-| `/` | Login. Quem ja tem sessao cai direto no board |
-| `/board` | O funil, que e a home de dentro do app |
-| `/radar` | A fila de triagem, ordenada por score |
-| `/perfil` | Seu dossie, termos de scoring e tamanho da apresentacao |
-| `/usuarios` | Quem tem acesso, cargo, senha, ativar e desativar |
-| `/cargos` | Cargos e as caixas de permissao de cada um |
-| `/coletas` | Historico das execucoes da coleta |
+</details>
 
-O login e por **e-mail**: ele e unico entre as contas e e a unica credencial
-que entra, inclusive no `/admin`. O username do Django continua existindo, mas
-so como identificador interno, derivado do e-mail quando a conta nasce.
+<details>
+<summary><b>Access — roles, invites and the second factor</b></summary>
+<br/>
 
-Para dar acesso a mais alguem: `/usuarios`, novo usuario, escolha o cargo. O
-front esconde o botao e o item de menu que a pessoa nao pode usar, mas quem
-decide e o backend, que checa de novo em toda chamada.
+Permissions live in a table instead of the code, so granting or revoking access is
+data, not a deploy. A **Cargo** groups permissions and a profile points at one. No
+role is seeded with everything: total access comes from `is_superuser`, which skips
+the check entirely.
 
-Tres travas impedem se trancar para fora: voce nao desativa a propria conta, nao
-troca o proprio cargo, e conta nao se apaga (desativa), porque candidatura e
-apresentacao ficam penduradas em quem as criou.
+Recovery, invitation and e-mail change are one machine: a single-use token sent by
+e-mail that authorizes exactly one action. For anything touching the password it is
+Django's `PasswordResetTokenGenerator`, whose token hashes the user's current state,
+so saving the new password invalidates the link by itself.
 
-O admin do Django foi removido do projeto. Tudo que so dava para fazer por la
-tem tela e endpoint proprios, sob as mesmas permissoes de cargo do resto:
-usuarios em `/usuarios`, cargos em `/cargos`, historico de coleta em `/coletas`,
-edicao de vaga no proprio Radar e detalhes da candidatura no board.
+Two decisions worth keeping: **the admin never knows anyone's password**, since an
+invited account is created with `set_unusable_password()`; and the **e-mail change
+link goes to the new address**, because that is the only way to prove it exists and
+belongs to the person before it becomes their credential.
 
-### Senha, e-mail e segundo fator
+The second factor is TOTP, with eight backup codes generated at activation and
+stored hashed. Preparing does not enable anything, so whoever opens the screen and
+gives up halfway is not locked out.
 
-Nao existe cadastro publico: conta so nasce por convite de quem tem
-`usuarios.gerenciar`. O que existe de rota publica sao quatro telas, todas
-alcancadas por um link mandado por e-mail.
+</details>
 
-| Fluxo | Onde comeca | Onde termina |
-|---|---|---|
-| Convite | admin cria a conta em `/usuarios` | `/definir-senha` |
-| Esqueci a senha | link no login | `/redefinir-senha` |
-| Trocar o e-mail | `/perfil` | `/confirmar-email` |
-| Trocar a senha | `/perfil` | ali mesmo, com a senha atual |
+<details>
+<summary><b>API</b></summary>
+<br/>
 
-Os tres primeiros usam a mesma maquina, em `apps/accounts/links.py`. Para senha
-e o `PasswordResetTokenGenerator` do Django, cujo token e um hash do estado do
-usuario: gravar a senha nova ja derruba o link, sem tabela de tokens usados.
-Para o e-mail e `signing.dumps`, que carrega o endereco novo dentro do proprio
-link assinado.
-
-Duas decisoes que valem saber:
-
-- **o admin nunca sabe a senha de ninguem.** A conta nasce com
-  `set_unusable_password()` e a pessoa escolhe a dela pelo convite;
-- **o link de troca de e-mail vai para o endereco NOVO**, e nada muda ate ele
-  ser aberto. E o unico jeito de provar que aquele endereco existe e e da
-  pessoa antes de ele virar a credencial de entrada.
-
-O segundo fator e TOTP (`apps/accounts/dois_fatores.py`), com oito codigos de
-reserva gerados junto com a ativacao e guardados com hash. Preparar nao liga
-nada: quem abre a tela e desiste no meio nao fica trancado fora. Com 2FA ativo,
-a senha certa devolve `precisa_codigo` e **nao** cria sessao — `request.user`
-so vira aquela pessoa depois do `POST /sessao/codigo/`.
-
-As rotas publicas e a de codigo tem limite de tentativa (`DEFAULT_THROTTLE_RATES`
-em `config/settings/base.py`): 10/min no login, 5/hora na recuperacao, 10/min no
-codigo. O `esqueci` responde sempre a mesma frase, exista ou nao a conta.
-
-**E-mail:** sem `EMAIL_HOST` no `.env`, o Django imprime a mensagem no console e
-o link aparece no terminal do `runserver`, que basta para desenvolver. Em
-producao, alem das credenciais do SMTP, `FRONTEND_URL` precisa ser o endereco
-real do front: e a base de todo link mandado por e-mail.
-
-**Uma limitacao consciente:** `score`, `tags`, `seniority` e `work_mode` ainda
-sao colunas do `Job`, calculadas por um perfil so. Com dois perfis usando termos
-diferentes, a mesma vaga teria dois scores, e isso pede uma tabela de juncao
-`(vaga, perfil)`. O `Perfil.termos` ja existe para essa mudanca ser so de
-armazenamento quando a hora chegar.
-
-## Ajustando o score
-
-Todo o criterio de "vaga boa pra mim" vive em `apps/jobs/scoring/profile.py`,
-que e o ponto de partida de quem nunca mexeu em nada. Um perfil com `termos`
-preenchidos sobrescreve esse padrao.
-Cada grupo tem um peso e uma lista de termos, e acerto no titulo vale o dobro de
-acerto na descricao. Depois de mexer, rode `manage.py rescore`.
-
-## Fontes
-
-**GitHub Issues** le quatro repositorios de vagas da comunidade brasileira pela
-API publica: `backend-br/vagas` e `soujava/vagas-java` (ativos), `frontendbr/vagas`
-e `react-brasil/vagas` (parados, mas com fila aberta). Sem token o limite e 60
-requisicoes/hora; com `GITHUB_TOKEN` no `.env` sobe para 5000.
-
-**Gupy** consome o portal publico onde publica a maior parte das empresas
-grandes do Brasil. Sao 26 termos de busca, cada um paginado ate o fim, o que
-rende cerca de 2700 resultados brutos por rodada. O endereco e configuravel por
-`GUPY_API`.
-
-Duas coisas medidas na API da Gupy que valem lembrar antes de mexer nela:
-`limit` tem teto de 100 (200 devolve 400), e o `pagination.total` do envelope
-**mente** com `limit` alto, cravando 100 mesmo quando existem 650 resultados.
-Por isso a paginacao para na primeira pagina incompleta, e nao pelo `total`.
-Ela tambem nao aceita nenhum parametro de ordenacao ou de data, entao recencia
-so da para resolver do nosso lado.
-
-**LinkedIn ficou de fora de proposito.** Scraping viola os termos deles e o
-risco e perder a conta, que e o ativo mais importante durante uma busca de
-emprego. Vaga do LinkedIn entra pelo cadastro manual.
-
-### Adicionando uma fonte
-
-Subclasse `Source` em `apps/collectors/sources/`, implemente `fetch` devolvendo
-`RawJob`, e registre em `SOURCES` no `__init__.py`. A fonte nao fala com o banco
-e nao pontua nada, entao da para testar sem Django.
-
-## Modelo de dados
-
-- **Job** (`apps/jobs`): a vaga coletada. `key` e o hash de deduplicacao, entao
-  coletar a mesma vaga duas vezes, mesmo de fontes diferentes, nao duplica.
-  `created_at` e a data da coleta.
-- **Application** (`apps/pipeline`): 1:1 com Job. Status no funil, prioridade,
-  proximo passo e a data do proximo passo, que e o que alimenta o alerta de
-  vencidos.
-- **Interaction** (`apps/pipeline`): linha do tempo da candidatura. Toda mudanca
-  de status grava uma automaticamente.
-- **Pitch** (`apps/jobs`): uma versao gerada do "Apresente-se". Historico, e nao
-  um texto por vaga: gerar de novo acrescenta, e comparar as versoes e o que
-  ensina a ajustar o dossie.
-- **CollectionRun** (`apps/collectors`): log de cada execucao da coleta, por fonte.
-- **Perfil / Cargo / Permissao** (`apps/accounts`): quem usa o Vaggio, o que o
-  app sabe sobre a pessoa, e o que ela pode fazer.
-
-Vaga nao se apaga, descarta: o historico e o que impede a mesma vaga de voltar
-para a fila na proxima coleta. Candidatura tambem nao se apaga, vira Rejeitada
-ou Desisti.
-
-## API
-
-Tudo sob `/api/v1/`. Toda falha responde no mesmo envelope
+Everything under `/api/v1/`. Every failure answers in the same envelope
 `{ error: { code, message, details } }`.
 
-| Rota | O que faz |
+| Route | What it does |
 |---|---|
-| `GET /jobs/` | Fila de triagem. `?queue=triage\|discarded\|all`, `?q=`, `?source=`, `?min_score=`, `?published_within=7`, `?page=`, `?page_size=` |
-| `POST /jobs/` | Cadastro manual (e por aqui que a vaga do LinkedIn entra) |
-| `PATCH /jobs/{id}/` | Corrige a vaga: titulo, empresa, local, descricao, score, tags |
-| `POST /jobs/{id}/discard/` | Descarta |
-| `POST /jobs/{id}/restore/` | Devolve para a fila |
-| `GET /jobs/stats/` | Contadores da tela Radar |
-| `GET /jobs/{id}/pitch/` | Versoes ja geradas do "Apresente-se" |
-| `POST /jobs/{id}/pitch/` | Gera mais uma (`max_chars`, `instrucao`) |
-| `GET /applications/board/` | O board inteiro: colunas, atrasadas e contadores |
-| `POST /applications/` | Poe a vaga no funil |
-| `PATCH /applications/{id}/` | Move de status, muda prioridade, notas, proximo passo |
-| `GET /applications/closed/` | As encerradas: rejeitadas e desistidas juntas |
-| `DELETE /applications/{id}/` | Apaga, so depois de encerrada |
-| `GET /collections/` | Historico das coletas |
-| `POST /collections/run/` | Dispara a coleta agora (e o botao "buscar vagas novas" do Radar) |
-| `GET /health/` | Ping (unica rota aberta) |
-| `GET /sessao/` | Quem esta logado. Tambem planta o cookie de CSRF |
-| `POST /sessao/` | Entra (`email`, `password`, `lembrar`). Com 2FA devolve `precisa_codigo` |
-| `POST /sessao/codigo/` | Segundo passo da entrada. **Publica** |
-| `DELETE /sessao/` | Sai |
-| `GET /perfil/` | O proprio perfil, com cargo e permissoes |
-| `PATCH /perfil/` | Edita dossie, termos e preferencias |
-| `POST /perfil/senha/` | Troca a propria senha (exige a atual) |
-| `POST /perfil/email/` | Pede a troca de e-mail; o link vai para o endereco novo |
-| `GET/POST /perfil/2fa/` | Estado do segundo fator, e o comeco da ativacao |
-| `POST /perfil/2fa/confirmar/` | Liga, e devolve os codigos de reserva |
-| `POST /perfil/2fa/desativar/`, `/codigos/` | Desliga, ou so renova os codigos |
-| `GET /usuarios/` | Quem tem acesso |
-| `POST /usuarios/` | Cria conta e perfil juntos (`email` obrigatorio: e o login) |
-| `PATCH /usuarios/{id}/` | Troca cargo, nome, e-mail, ativa e desativa |
-| `POST /usuarios/{id}/convite/` | Manda o link para a pessoa escolher a propria senha |
-| `GET /cargos/` | Cargos e o que cada um libera |
-| `POST /cargos/`, `PATCH`, `DELETE` | Cria, edita e apaga cargo |
-| `GET /permissoes/` | Catalogo de permissoes (somente leitura) |
-| `POST /senha/esqueci/` | Pede o link de recuperacao. **Publica** |
-| `POST /senha/redefinir/` | Fecha o link de recuperacao e o de convite. **Publica** |
-| `POST /senha/conferir-link/` | Diz se um link ainda vale. **Publica** |
-| `POST /email/confirmar/` | Aplica a troca de e-mail. **Publica** |
+| `GET /jobs/` | The triage queue. `?queue=`, `?q=`, `?source=`, `?min_score=`, `?published_after=` |
+| `POST /jobs/` · `PATCH /jobs/{id}/` | Manual entry, and correcting what the collector got wrong |
+| `POST /jobs/{id}/discard/` · `/restore/` | Triage |
+| `GET/POST /jobs/{id}/pitch/` | Cover letters already written, and writing one more |
+| `GET /applications/board/` | The whole board: columns, overdue and counters |
+| `GET /applications/closed/` | Rejected and withdrawn together |
+| `POST /collections/run/` | Run a collection now |
+| `GET/POST/DELETE /sessao/` | Who is logged in, enter, leave |
+| `POST /sessao/codigo/` | Second step of the login, with 2FA on |
+| `GET/PATCH /perfil/` | Dossier, scoring terms and preferences |
+| `POST /perfil/senha/` · `/email/` · `/2fa/` | Password, e-mail and second factor |
+| `POST /senha/esqueci/` · `/redefinir/` | Password recovery. **Public** |
+| `POST /email/confirmar/` | Applies the e-mail change. **Public** |
+| `GET/POST /usuarios/` · `/cargos/` | Users and roles |
 
-Fora `/health/`, que e ping de infraestrutura, as unicas rotas sem sessao sao as
-cinco marcadas como publicas, e todas nascem de um link mandado por e-mail. Elas
-tem limite de tentativa proprio. O resto exige sessao, e o acesso e por cargo
-(veja **Perfil e acesso**).
+Apart from `/health/`, the only routes answering without a session are the public
+ones above, and every one of them starts from a link sent by e-mail.
 
-## Testes
+</details>
+
+---
+
+## `~/tests`
 
 ```bash
-cd backend
-pytest          # 184 testes
-ruff check .    # lint
+cd backend && pytest              # 237 tests
+cd frontend && npx tsc -b && npx eslint src/ && npm run build
 ```
 
-```bash
-cd frontend
-npm run build   # tsc -b + vite build
-npm run lint
-```
+The suite covers the API, the scoring engine, the collectors and the security flows,
+including what must **not** work: a recovery link used twice, a token aimed at
+another account, the same backup code entering twice, and the rate limit answering
+429.
 
-O scoring e funcao pura e roda sem banco. As fontes sao testadas com payload
-fixo, sem rede. O resto usa `pytest-django`.
+---
+
+## `~/stack`
+
+<div align="center">
+
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | ![Python](https://img.shields.io/badge/Python_3.13-3776AB?style=flat-square&logo=python&logoColor=white) ![Django](https://img.shields.io/badge/Django_5.2-092E20?style=flat-square&logo=django&logoColor=white) ![DRF](https://img.shields.io/badge/DRF-A30000?style=flat-square&logo=django&logoColor=white) ![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white) |
+| **Frontend** | ![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind_v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) ![React Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=flat-square&logo=reactquery&logoColor=white) |
+| **Database** | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) |
+| **AI** | ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) |
+| **Sources** | ![GitHub](https://img.shields.io/badge/GitHub_Issues-181717?style=flat-square&logo=github&logoColor=white) ![Gupy](https://img.shields.io/badge/Gupy-00B37E?style=flat-square&logoColor=white) |
+
+</div>
+
+---
+
+<div align="center">
+  <br/>
+  <sub>
+    Built by <a href="https://github.com/mj01px"><strong>Mauro Junior</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://www.linkedin.com/in/mauroapjunior/">LinkedIn</a>
+  </sub>
+  <br/><br/>
+</div>
