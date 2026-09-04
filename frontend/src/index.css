@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* Paleta herdada do radar: mesma identidade, agora como token do Tailwind.
+   Quem muda a cor do app muda aqui, nao no componente. */
+@theme {
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  --color-surface: #f6f7f9;
+  --color-card: #ffffff;
+  --color-ink: #16181d;
+  --color-muted: #6b7280;
+  --color-line: #e3e6ea;
+  /* Borda de campo editavel. Separa de --color-line de proposito: a linha que
+     divide secao pode ser fraca, a que promete "da para digitar aqui" nao. */
+  --color-field: #c8cdd4;
+  --color-accent: #0b3d66;
+  /* Fundo do painel da marca. Nao da para derivar de --color-accent com
+     opacidade: o color-mix do Tailwind roda em oklab e devolve cinza, sem azul. */
+  --color-wash: #eef3f8;
+  --color-ok: #067647;
+  --color-warn: #b45309;
+  --color-bad: #b42318;
+}
+
+/* O tema escuro sobrescreve os mesmos tokens fora do @theme de proposito:
+   regra sem layer vence o layer do Tailwind e nao passa pelo tree-shaking,
+   entao o valor escuro existe mesmo para token que so uma tela usa. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #12141a;
+    --color-card: #1b1e26;
+    --color-ink: #e8eaee;
+    --color-muted: #9aa3af;
+    --color-line: #2a2f3a;
+    --color-field: #3a4150;
+    --color-accent: #7cb3e8;
+    --color-wash: #191d27;
+    --color-ok: #4ade80;
+    --color-warn: #fbbf24;
+    --color-bad: #f87171;
+  }
+}
+
+/* Ilha clara dentro de qualquer tema. Redefinir os tokens no proprio no, e nao
+   no :root, faz a heranca resolver: quem esta dentro do elemento le estes
+   valores, quem esta fora continua no tema do sistema. Existe para o login,
+   que e a primeira impressao do produto e nao deve depender do SO de quem abre. */
+[data-tema='claro'] {
+  --color-surface: #f6f7f9;
+  --color-card: #ffffff;
+  --color-ink: #16181d;
+  --color-muted: #6b7280;
+  --color-line: #e3e6ea;
+  --color-field: #c8cdd4;
+  --color-accent: #0b3d66;
+  --color-wash: #eef3f8;
+  --color-ok: #067647;
+  --color-warn: #b45309;
+  --color-bad: #b42318;
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
