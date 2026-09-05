@@ -35,8 +35,12 @@ export function Sidebar({ trilho, onAlternarTrilho, gaveta = false, onFechar }: 
   const compacto = trilho && !gaveta
 
   return (
+    // `h-full` e o que segura a gaveta no mobile. No desktop o pai e flex e
+    // estica o filho sozinho; na gaveta o pai e um bloco posicionado, entao
+    // sem altura explicita a barra parava na altura do conteudo e o fundo da
+    // tela aparecia por baixo do "Sair".
     <div
-      className={`flex shrink-0 flex-col border-r border-line bg-card ${
+      className={`flex h-full shrink-0 flex-col border-r border-line bg-card ${
         compacto ? 'w-16 items-center' : 'w-62'
       }`}
     >
